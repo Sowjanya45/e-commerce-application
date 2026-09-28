@@ -15,6 +15,8 @@ import java.time.LocalDateTime;
 public class User {
     @Id
     private String id;
+
+    @Indexed(unique = true)
     private String keycloakId;
     private String firstName;
     private String lastName;

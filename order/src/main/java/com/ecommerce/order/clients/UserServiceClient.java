@@ -8,6 +8,8 @@ import org.springframework.web.service.annotation.HttpExchange;
 @HttpExchange
 public interface UserServiceClient {
 
-    @GetExchange("/api/users/{id}")
-    UserResponse getUserDetails(@PathVariable String id);
+    // userId here is the Keycloak subject the Gateway injects into
+    // X-User-ID, not the Mongo document id.
+    @GetExchange("/api/users/by-keycloak-id/{keycloakId}")
+    UserResponse getUserDetails(@PathVariable String keycloakId);
 }

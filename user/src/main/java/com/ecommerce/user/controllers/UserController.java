@@ -28,6 +28,13 @@ public class UserController {
                                     HttpStatus.OK);
     }
 
+    @GetMapping("/by-keycloak-id/{keycloakId}")
+    public ResponseEntity<UserResponse> getUserByKeycloakId(@PathVariable String keycloakId){
+        return userService.fetchUserByKeycloakId(keycloakId)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<UserResponse> getUser(@PathVariable String id){
         log.info("Request received for user: {}", id);
