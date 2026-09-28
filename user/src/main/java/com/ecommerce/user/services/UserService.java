@@ -47,6 +47,11 @@ public class UserService {
                 .map(this::mapToUserResponse);
     }
 
+    public Optional<UserResponse> fetchUserByKeycloakId(String keycloakId) {
+        return userRepository.findByKeycloakId(keycloakId)
+                .map(this::mapToUserResponse);
+    }
+
     public boolean updateUser(String id, UserRequest updatedUserRequest) {
         return userRepository.findById(String.valueOf(id))
                 .map(existingUser -> {
