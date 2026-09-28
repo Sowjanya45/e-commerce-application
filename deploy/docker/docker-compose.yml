@@ -123,7 +123,7 @@ services:
     volumes:
       - ./../../configserver/src/main/resources/config:/config
     healthcheck:
-      test: [ "CMD", "wget", "--spider", "http://localhost:8761/actuator/health" ]
+      test: [ "CMD", "wget", "--spider", "http://localhost:8888/actuator/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -247,11 +247,7 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
     depends_on:
-      - mongo
-      - rabbitmq
-      - eureka
-      - keycloak
-      - config-server
+      - kafka
     networks:
       - backend
     restart: on-failure
@@ -345,6 +341,7 @@ services:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     networks:
       - loki
+      - backend
 
   grafana:
     image: grafana/grafana:latest

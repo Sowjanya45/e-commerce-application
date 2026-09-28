@@ -14,7 +14,9 @@ spring:
     config:
       server:
         native:
-          search-locations: file:///C:\Users\FAISAL\Desktop\courses\embarkx\Microservices\ecom-microservices\configserver\src\main\resources\config
+          # Relative to configserver's own working directory (module root),
+          # so this works on any machine instead of one developer's path.
+          search-locations: file:./src/main/resources/config
 
 server:
   port: 8888
