@@ -43,38 +43,33 @@ which `notification` consumes asynchronously.
 
 ### 2. Create the environment file
 
-Docker Compose expects `deploy/docker/.env` (not committed — it holds credentials). Create it
-with at least:
+Docker Compose expects `deploy/docker/.env` (not committed — it holds credentials). Copy the
+template and adjust as needed:
 
 ```
-DB_USER=your_db_user
-DB_PASSWORD=your_db_password
-MONGO_URI=mongodb://mongo:27017/ecom_user
-RABBITMQ_HOST=rabbitmq
-RABBITMQ_PORT=5672
-RABBITMQ_USERNAME=guest
-RABBITMQ_PASSWORD=guest
-RABBITMQ_VHOST=/
-ZIPKIN_URL=http://zipkin:9411/api/v2/spans
+cd deploy/docker
+cp .env.example .env
 ```
-
-`PGADMIN_DEFAULT_EMAIL` / `PGADMIN_DEFAULT_PASSWORD` are optional (they fall back to sane
-defaults).
 
 ### 3. Set up Keycloak
 
 The app expects a Keycloak realm named `ecom-app` with an `oauth2-pkce` client and `PRODUCT` /
-`ORDER` / `USER` client roles already defined — a realm export ready to import is at
-[`deploy/docker/keycloak/realm-export-ecom-app.json`](deploy/docker/keycloak/realm-export-ecom-app.json).
+`ORDER` / `USER` client roles already defined, plus an admin user `user-service` can use to call
+Keycloak's Admin REST API when provisioning new accounts.
 
-1. Start Keycloak (`docker compose up keycloak`), log in to the admin console at
-   `http://localhost:8443` (`admin` / `admin`, from `docker-compose.yml`).
-2. Import `deploy/docker/keycloak/realm-export-ecom-app.json` as a new realm.
-3. Create a user inside the `ecom-app` realm for `user-service`'s admin API calls, matching
-   `keycloak.admin.username` / `password` in
-   `configserver/src/main/resources/config/user-service.yml` (`user` / `user` by default), and
-   grant it enough `realm-management` permissions (`manage-users` + `view-users`, or
-   `realm-admin`) to create users and assign roles via the Admin REST API.
+Start Keycloak, then run the setup script, which imports the realm
+([`realm-export-ecom-app.json`](deploy/docker/keycloak/realm-export-ecom-app.json)) and creates
+that admin user — both steps are safe to re-run:
+
+```
+docker compose up -d keycloak
+./keycloak/setup-realm.sh
+```
+
+By default it creates the user `user`/`user`, matching `keycloak.admin.username`/`password` in
+`configserver/src/main/resources/config/user-service.yml`. Override via env vars
+(`APP_ADMIN_USERNAME`, `APP_ADMIN_PASSWORD`, etc. — see the script's header comment) if you want
+different credentials, and update that config file to match.
 
 ### 4. Start everything
 
