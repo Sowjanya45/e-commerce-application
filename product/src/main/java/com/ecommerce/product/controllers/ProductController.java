@@ -65,4 +65,21 @@ public class ProductController {
     public ResponseEntity<List<ProductResponse>> searchProducts(@RequestParam String keyword) {
         return ResponseEntity.ok(productService.searchProducts(keyword));
     }
+
+    @PatchMapping("/{id}/decrement-stock")
+    public ResponseEntity<String> decrementStock(@PathVariable Long id,
+                                                  @RequestParam Integer quantity) {
+        if (!productService.decrementStock(id, quantity)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body("Insufficient stock or product not found");
+        }
+        return ResponseEntity.ok("Stock updated");
+    }
+
+    @PatchMapping("/{id}/restore-stock")
+    public ResponseEntity<String> restoreStock(@PathVariable Long id,
+                                                @RequestParam Integer quantity) {
+        productService.restoreStock(id, quantity);
+        return ResponseEntity.ok("Stock restored");
+    }
 }

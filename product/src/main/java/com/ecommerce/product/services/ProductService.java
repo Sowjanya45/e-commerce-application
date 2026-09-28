@@ -4,6 +4,7 @@ import com.ecommerce.product.dtos.ProductRequest;
 import com.ecommerce.product.dtos.ProductResponse;
 import com.ecommerce.product.models.Product;
 import com.ecommerce.product.repositories.ProductRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -79,5 +80,15 @@ public class ProductService {
     public Optional<ProductResponse> getProductById(String id) {
         return productRepository.findByIdAndActiveTrue(Long.valueOf(id))
                 .map(this::mapToProductResponse);
+    }
+
+    @Transactional
+    public boolean decrementStock(Long id, Integer quantity) {
+        return productRepository.decrementStock(id, quantity) > 0;
+    }
+
+    @Transactional
+    public void restoreStock(Long id, Integer quantity) {
+        productRepository.incrementStock(id, quantity);
     }
 }
