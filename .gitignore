@@ -20,3 +20,8 @@ build/
 # OS-specific
 .DS_Store
 Thumbs.db
+
+# IDE project files
+.idea/
+*.iml
+.vscode/
