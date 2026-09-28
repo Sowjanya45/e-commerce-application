@@ -1,6 +1,5 @@
 package com.ecommerce.product.repositories;
 
-import aj.org.objectweb.asm.commons.Remapper;
 import com.ecommerce.product.models.Product;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
