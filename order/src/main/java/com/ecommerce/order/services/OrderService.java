@@ -1,5 +1,6 @@
 package com.ecommerce.order.services;
 
+import com.ecommerce.order.clients.ProductServiceClient;
 import com.ecommerce.order.dtos.OrderCreatedEvent;
 import com.ecommerce.order.repositories.OrderRepository;
 import com.ecommerce.order.models.OrderStatus;
@@ -13,6 +14,7 @@ import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -24,6 +26,7 @@ public class OrderService {
     private final CartService cartService;
     private final OrderRepository orderRepository;
     private final StreamBridge streamBridge;
+    private final ProductServiceClient productServiceClient;
 
     public Optional<OrderResponse> createOrder(String userId) {
         // Validate for cart items
@@ -38,6 +41,23 @@ public class OrderService {
 //            return Optional.empty();
 //        }
 //        User user = userOptional.get();
+
+        // Reserve stock for every item before committing the order. If any
+        // item can't be reserved (out of stock / product gone), roll back
+        // whatever was already reserved for this order and abort - a
+        // best-effort compensation, not a full saga.
+        List<CartItem> reservedItems = new ArrayList<>();
+        for (CartItem item : cartItems) {
+            String reservationResult = productServiceClient.decrementStock(
+                    item.getProductId(), item.getQuantity());
+            if (reservationResult == null) {
+                for (CartItem toRestore : reservedItems) {
+                    productServiceClient.restoreStock(toRestore.getProductId(), toRestore.getQuantity());
+                }
+                return Optional.empty();
+            }
+            reservedItems.add(item);
+        }
 
         // Calculate total price
         BigDecimal totalPrice = cartItems.stream()
