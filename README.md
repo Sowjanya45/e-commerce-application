@@ -1,78 +1,110 @@
-This is the Official repository of **Spring Boot Microservices Professional eCommerce Masterclass** on Udemy
+# E-Commerce Microservices
 
-# The Ultimate Java and Spring Boot Mastery
+A Spring Boot microservices e-commerce backend: service discovery, centralized config, an API
+gateway with JWT auth, and independent services for users, products, orders/cart, and
+notifications — wired together with Kafka, RabbitMQ, Keycloak, and a full observability stack
+(Prometheus, Grafana, Zipkin, Loki).
 
-Welcome to your one-stop-shop for mastering Java and Spring Boot! This repository offers a comprehensive learning experience with high-quality resources and community support. Dive into over 23+ hours of premium content, with everything you need to excel at Java and Spring Boot development.
+## Architecture
 
-## 🎓 Learning Roadmap
+| Service | Port | Responsibility |
+|---|---|---|
+| `eureka` | 8761 | Service discovery (Netflix Eureka) |
+| `configserver` | 8888 | Centralized externalized config (native/file-backed), refreshable via Spring Cloud Bus |
+| `gateway` | 8080 | Single entry point: routing, JWT validation (OAuth2 resource server), rate limiting, circuit breaking |
+| `user` | 8082 | User profiles (MongoDB) + Keycloak account provisioning |
+| `product` | 8081 | Product catalog (PostgreSQL) |
+| `order` | 8083 | Cart, checkout, stock reservation, publishes order events |
+| `notification` | 8084 | Consumes order events off Kafka |
 
-Most of the courses below are available in **Udemy For Business**, so if you have subscription - you can get FREE access.
-Here’s a structured path to enhance your skills with detailed courses available:
+**Request flow:** clients hit the `gateway`, which validates the caller's JWT (issued by
+Keycloak), injects a trusted user identity header, and routes to `user`/`product`/`order` via
+Eureka-based load balancing. `order` calls `product` and `user` synchronously over HTTP for cart
+operations, reserves stock atomically on checkout, then publishes an `OrderCreatedEvent` to Kafka,
+which `notification` consumes asynchronously.
 
-1. **[Spring Boot Full Stack By Building Complex Projects Step by Step](https://link.embarkx.com/spring-boot) (80+ Hours of Content)**
-2. **[Master Spring Boot Microservices](https://link.embarkx.com/microservices) (50+ Hours of Content)**
-3. **[Learn Java with 60+ Hours of Content](http://link.embarkx.com/java) (60+ Hours of Content)**
-4. **[Master Spring Security with React JS + OAuth2](https://link.embarkx.com/spring-security) (34+ Hours of Content)**
-5. **[Master IntelliJ IDEA](http://link.embarkx.com/intellij) (3+ Hours of Content)**
+## Tech stack
 
+- **Spring Boot 3 / Spring Cloud** — Eureka, Config Server, Gateway, OpenFeign-style HTTP
+  interfaces, Resilience4j (circuit breaker, retry, rate limiter)
+- **Keycloak** — identity provider (OAuth2/OIDC), JWT issuance and role management
+- **PostgreSQL** (product, order) and **MongoDB** (user) — polyglot persistence
+- **Kafka** — async order events; **RabbitMQ** — Spring Cloud Bus config-refresh broadcasts
+- **Redis** — gateway rate limiting
+- **Prometheus + Grafana** — metrics; **Zipkin** — distributed tracing; **Loki + Grafana Alloy** —
+  centralized logs
 
-## 🌟 With All Our Courses You Gain Access To
+## Running locally
 
-- 📝 **Notes:** Detailed and downloadable notes to accompany each lesson.
-- 💻 **Source Code:** Full access to the source code used in the tutorials.
-- 🤔 **Doubt Solving:** Responsive instructor and community support.
-- 🎥 **High-Quality HD Videos:** Easy to understand, high-definition video tutorials.
-- 🔄 **Free Lifetime Updates:** Continuous updates to course content at no extra cost.
+### 1. Prerequisites
 
-## 📚 Why Choose This Mastery Series?
+- Docker + Docker Compose
+- (Optional, for building from source instead of the prebuilt images) Java 21 and Maven
 
-With this series, you're not just learning; you're preparing to dominate the field of Java and Spring Boot development. Our structured learning path ensures that you build your skills progressively, with each course designed to build on the knowledge gained from the previous one.
+### 2. Create the environment file
 
-### Join Us Now!
+Docker Compose expects `deploy/docker/.env` (not committed — it holds credentials). Create it
+with at least:
 
-Start your journey today to become a master at Java and Spring Boot. Our community and expert instructors are here to support your learning every step of the way. **Enroll and start building your future, today!**
+```
+DB_USER=your_db_user
+DB_PASSWORD=your_db_password
+MONGO_URI=mongodb://mongo:27017/ecom_user
+RABBITMQ_HOST=rabbitmq
+RABBITMQ_PORT=5672
+RABBITMQ_USERNAME=guest
+RABBITMQ_PASSWORD=guest
+RABBITMQ_VHOST=/
+ZIPKIN_URL=http://zipkin:9411/api/v2/spans
+```
 
+`PGADMIN_DEFAULT_EMAIL` / `PGADMIN_DEFAULT_PASSWORD` are optional (they fall back to sane
+defaults).
 
+### 3. Set up Keycloak
 
+The app expects a Keycloak realm named `ecom-app` with an `oauth2-pkce` client and `PRODUCT` /
+`ORDER` / `USER` client roles already defined — a realm export ready to import is at
+[`deploy/docker/keycloak/realm-export-ecom-app.json`](deploy/docker/keycloak/realm-export-ecom-app.json).
 
+1. Start Keycloak (`docker compose up keycloak`), log in to the admin console at
+   `http://localhost:8443` (`admin` / `admin`, from `docker-compose.yml`).
+2. Import `deploy/docker/keycloak/realm-export-ecom-app.json` as a new realm.
+3. Create a user inside the `ecom-app` realm for `user-service`'s admin API calls, matching
+   `keycloak.admin.username` / `password` in
+   `configserver/src/main/resources/config/user-service.yml` (`user` / `user` by default), and
+   grant it enough `realm-management` permissions (`manage-users` + `view-users`, or
+   `realm-admin`) to create users and assign roles via the Admin REST API.
 
-# Usage Policy for Course Materials
+### 4. Start everything
 
-## Instructor Information
+```
+cd deploy/docker
+docker compose up
+```
 
-**Instructor:** Faisal Memon  
-**Company:** [EmbarkX.com](http://www.embarkx.com)
+### 5. Useful endpoints once it's up
 
-## Policy Overview
+| What | URL |
+|---|---|
+| API Gateway | http://localhost:8080 |
+| Eureka dashboard | http://localhost:8761 |
+| Keycloak admin console | http://localhost:8443 |
+| pgAdmin | http://localhost:5050 |
+| RabbitMQ management | http://localhost:15672 |
+| Grafana | http://localhost:3000 |
+| Prometheus | http://localhost:9090 |
+| Zipkin | http://localhost:9411 |
 
-This document outlines the guidelines and restrictions concerning the use of course materials provided by EmbarkX, including but not limited to PDF presentations, code samples, and video tutorials.
+A ready-to-import Postman collection covering the main API flows is at
+[`ecommerce.postman_collection.json`](ecommerce.postman_collection.json).
 
-### 1. Personal Use Only
+## Known limitations
 
-The materials provided in this course are intended for **your personal use only**. They are to be used solely for the purpose of learning and completing this course.
-
-### 2. No Unauthorized Sharing or Distribution
-
-You are **not permitted** to share, distribute, or publicly post any course materials on any websites, social media platforms, or other public forums without prior written consent from the instructor.
-
-### 3. Intellectual Property
-
-All course materials are protected by copyright laws and are the intellectual property of Faisal Memon and EmbarkX. Unauthorized use, reproduction, or distribution of these materials is **strictly prohibited**.
-
-### 4. Reporting Violations
-
-If you become aware of any unauthorized sharing or distribution of course materials, please report it immediately to [embarkxofficial@gmail.com](mailto:embarkxofficial@gmail.com).
-
-### 5. Legal Action
-
-We reserve the right to take legal action against individuals or entities found to be violating this usage policy.
-
-## Thank You
-
-Thank you for respecting these guidelines and helping us maintain the integrity of our course materials.
-
-## Contact Information
-
-- **Email:** [embarkxofficial@gmail.com](mailto:embarkxofficial@gmail.com)
-- **Website:** [www.embarkx.com](http://www.embarkx.com)
-
+- Stock reservation on checkout uses a best-effort compensating rollback, not a full
+  saga/orchestrated transaction — see `OrderService.createOrder()`.
+- `notification-service` currently only logs consumed events; it doesn't yet send real emails or
+  write to a database.
+- The Gateway's `PRODUCT` role restriction on product-management endpoints has no account holding
+  that role by default — grant it manually in Keycloak to whichever account should manage the
+  catalog.
