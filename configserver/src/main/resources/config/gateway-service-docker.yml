@@ -22,7 +22,13 @@ management:
       endpoint: ${ZIPKIN_URL:http://zipkin:9411/api/v2/spans}
 
 # Circuit Breaker
+# Default time limit is 1s, which the first requests after startup exceed (cold
+# start) and get the 503 fallback even though the call would have succeeded.
 resilience4j:
+  timelimiter:
+    instances:
+      ecomBreaker:
+        timeoutDuration: 30s
   circuitbreaker:
     instances:
       ecomBreaker:
@@ -38,6 +44,10 @@ resilience4j:
 
 # SECURITY
 spring:
+  cloud:
+    loadbalancer:
+      cache:
+        ttl: 5s   # default 35s; makes recreated services reachable sooner
   data:
     redis:
       host: redis
@@ -55,3 +65,4 @@ eureka:
       defaultZone: http://eureka:8761/eureka/
     register-with-eureka: true
     fetch-registry: true
+    registry-fetch-interval-seconds: 5   # default 30s

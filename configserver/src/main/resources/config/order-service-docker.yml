@@ -4,6 +4,9 @@ spring:
     username: ${DB_USER}
     password: ${DB_PASSWORD}
   cloud:
+    loadbalancer:
+      cache:
+        ttl: 5s   # default 35s
     stream:
       bindings:
         createOrder-out-0:
@@ -70,6 +73,7 @@ eureka:
       defaultZone: http://eureka:8761/eureka/
     register-with-eureka: true
     fetch-registry: true
+    registry-fetch-interval-seconds: 5   # default 30s
 
 logging:
   file:

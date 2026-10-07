@@ -6,6 +6,8 @@ server:
   port: 8761
 
 eureka:
+  server:
+    use-read-only-response-cache: false   # default serves a registry up to 30s stale
   client:
     register-with-eureka: false
     fetch-registry: false
