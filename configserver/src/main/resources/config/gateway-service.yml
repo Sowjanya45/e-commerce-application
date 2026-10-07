@@ -19,7 +19,13 @@ management:
       probability: 1.0
 
 # Circuit Breaker
+# Default time limit is 1s, which the first requests after startup exceed (cold
+# start) and get the 503 fallback even though the call would have succeeded.
 resilience4j:
+  timelimiter:
+    instances:
+      ecomBreaker:
+        timeoutDuration: 30s
   circuitbreaker:
     instances:
       ecomBreaker:

@@ -102,6 +102,14 @@ public class KeyCloakAdminService {
         return path.substring(path.lastIndexOf("/") + 1);
     }
 
+    public void deleteUser(String userId) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(getAdminAccessToken());
+
+        String url = keycloakServerUrl + "/admin/realms/" + realm + "/users/" + userId;
+        restTemplate.exchange(url, HttpMethod.DELETE, new HttpEntity<>(headers), Void.class);
+    }
+
     private Map<String, Object> getRealmRoleRepresentation(String token,
                                                            String roleName) {
         HttpHeaders headers = new HttpHeaders();

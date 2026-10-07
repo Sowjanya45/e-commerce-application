@@ -37,9 +37,20 @@ public class UserService {
         updateUserFromRequest(user, userRequest);
         user.setKeycloakId(keycloakUserId);
 
-        keyCloakAdminService.assignRealmRoleToUser(userRequest.getUsername(),
-                "USER", keycloakUserId);
-        userRepository.save(user);
+        try {
+            keyCloakAdminService.assignRealmRoleToUser(userRequest.getUsername(),
+                    "USER", keycloakUserId);
+            userRepository.save(user);
+        } catch (RuntimeException e) {
+            // Don't leave an orphan Keycloak account behind: a retry would
+            // otherwise fail with "User exists with same email".
+            try {
+                keyCloakAdminService.deleteUser(keycloakUserId);
+            } catch (RuntimeException cleanupFailure) {
+                e.addSuppressed(cleanupFailure);
+            }
+            throw e;
+        }
     }
 
     public Optional<UserResponse> fetchUser(String id) {
