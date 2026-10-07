@@ -4,8 +4,8 @@ services:
     image: postgres:14
     mem_limit: 700m
     environment:
-      POSTGRES_USER: embarkx
-      POSTGRES_PASSWORD: embarkx
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       PGDATA: /data/postgres
     volumes:
       - postgres:/data/postgres
@@ -307,7 +307,9 @@ services:
       - loki
 
   minio:
-    image: minio/minio
+    # minio/minio was removed from Docker Hub; bitnamilegacy still hosts a working build
+    image: bitnamilegacy/minio:latest
+    user: root
     entrypoint:
       - sh
       - -euc

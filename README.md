@@ -43,21 +43,17 @@ which `notification` consumes asynchronously.
 
 ### 2. Create the environment file
 
-Docker Compose expects `deploy/docker/.env` (not committed — it holds credentials). Create it
-with at least:
+Docker Compose expects `deploy/docker/.env` (not committed — it holds credentials). Copy the
+template and edit the values:
 
 ```
-DB_USER=your_db_user
-DB_PASSWORD=your_db_password
-MONGO_URI=mongodb://mongo:27017/ecom_user
-RABBITMQ_HOST=rabbitmq
-RABBITMQ_PORT=5672
-RABBITMQ_USERNAME=guest
-RABBITMQ_PASSWORD=guest
-RABBITMQ_VHOST=/
-ZIPKIN_URL=http://zipkin:9411/api/v2/spans
+cd deploy/docker
+cp .env.example .env
 ```
 
+`DB_USER` / `DB_PASSWORD` are yours to choose — the Postgres container is created with them and
+`product` / `order` connect with them. The other links (`MONGO_URI`, `RABBITMQ_*`, `ZIPKIN_URL`)
+use the container names from `docker-compose.yml`, so they work as-is.
 `PGADMIN_DEFAULT_EMAIL` / `PGADMIN_DEFAULT_PASSWORD` are optional (they fall back to sane
 defaults).
 
