@@ -160,8 +160,10 @@ In realm `ecom-app`:
    > Keycloak 26 refuses to log in accounts missing these fields ("Account is not fully set
    > up"), which would make user creation fail later.
 2. **Credentials → Set password**: `user`, **Temporary = OFF**, Save.
-3. **Role mapping → Assign role → Filter by clients**: tick `manage-users` and `view-users`
-   (client **realm-management**) → Assign.
+3. **Role mapping → Assign role → Filter by clients**: tick `manage-users`, `view-users` **and
+   `view-clients`** (client **realm-management**) → Assign.
+   > Without `view-clients`, registering a user through the API fails with a 500
+   > (`403 Forbidden ... /clients/.../roles/USER` in the user-service log).
 
 These must match `keycloak.admin.username/password` in
 `configserver/src/main/resources/config/user-service*.yml` (`user` / `user` by default).
@@ -338,7 +340,9 @@ To inspect data:
 | `403 Forbidden` on product `POST/PUT/DELETE` | Your user lacks the `PRODUCT` client role. Assign it in Keycloak and fetch a **new** token. |
 | Token request: *"Account is not fully set up"* | The Keycloak user is missing Email / First name / Last name. Fill them in. |
 | Token request: *invalid_grant / Invalid user credentials* | Wrong password, or the password was saved as Temporary. |
-| User creation via API fails | The `user` service account in realm `ecom-app` is missing or lacks `manage-users` / `view-users` (step 4b), or was lost after `docker compose down` — recreate it. |
+| User creation via API fails (500) | The `user` service account in realm `ecom-app` is missing, lacks `manage-users` / `view-users` / `view-clients`, has no email/names (step 4b), or was lost after `docker compose down`. |
+| `503` from the gateway right after restarting/recreating a service | The gateway refreshes its service list every ~5 s, so this clears within seconds. If it persists, check `docker compose logs <service>` and <http://localhost:8761>. |
+| First request after startup is slow (several seconds) | Cold start (service discovery + JIT). The gateway allows up to 30 s for product calls before answering with the 503 fallback. |
 | Realm/users disappeared | `docker compose down` was used. Redo step 4 and use `stop`/`start` from now on. |
 | Gateway logs "Error determining if user allowed from redis" | The `redis` container isn't reachable. Check `docker compose ps redis` and that the gateway got the latest config (`docker compose restart gateway-service`). Requests are still allowed meanwhile (the limiter fails open). |
 | Everything is slow / containers killed | Docker is out of memory. Raise it in Docker Desktop → Settings → Resources. |

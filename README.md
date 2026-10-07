@@ -72,8 +72,10 @@ The app expects a Keycloak realm named `ecom-app` with an `oauth2-pkce` client a
 3. Create a user inside the `ecom-app` realm for `user-service`'s admin API calls, matching
    `keycloak.admin.username` / `password` in
    `configserver/src/main/resources/config/user-service.yml` (`user` / `user` by default), and
-   grant it enough `realm-management` permissions (`manage-users` + `view-users`, or
-   `realm-admin`) to create users and assign roles via the Admin REST API.
+   grant it the `realm-management` roles `manage-users`, `view-users` **and `view-clients`** (or
+   just `realm-admin`) so it can create users and assign roles via the Admin REST API. Also fill
+   in the user's email, first name and last name — Keycloak 26 refuses to log in accounts
+   without them ("Account is not fully set up").
 
 ### 4. Start everything
 
