@@ -96,6 +96,13 @@ services:
     restart: unless-stopped
 
 
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    networks:
+      - backend
+    restart: unless-stopped
+
   zipkin:
     image: openzipkin/zipkin
     container_name: zipkin
@@ -155,6 +162,7 @@ services:
     depends_on:
       - mongo
       - rabbitmq
+      - redis
       - eureka
       - keycloak
       - config-server

@@ -57,6 +57,9 @@ use the container names from `docker-compose.yml`, so they work as-is.
 `PGADMIN_DEFAULT_EMAIL` / `PGADMIN_DEFAULT_PASSWORD` are optional (they fall back to sane
 defaults).
 
+> A fuller walkthrough (building the images, Keycloak users, getting a token, troubleshooting)
+> is in [`docs/RUNNING_LOCALLY.md`](docs/RUNNING_LOCALLY.md).
+
 ### 3. Set up Keycloak
 
 The app expects a Keycloak realm named `ecom-app` with an `oauth2-pkce` client and `PRODUCT` /
