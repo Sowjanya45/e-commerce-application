@@ -6,7 +6,9 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.net.URI;
 import java.util.HashMap;
@@ -82,11 +84,16 @@ public class KeyCloakAdminService {
 
         String url = keycloakServerUrl + "/admin/realms/" + realm + "/users";
 
-        ResponseEntity<String> response = restTemplate.postForEntity(
-                url,
-                entity,
-                String.class
-        );
+        ResponseEntity<String> response;
+        try {
+            response = restTemplate.postForEntity(url, entity, String.class);
+        } catch (HttpClientErrorException.Conflict e) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "A user with this username or email already exists");
+        } catch (HttpClientErrorException.BadRequest e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Invalid user details (username, email, names and password are required)");
+        }
 
         if (!HttpStatus.CREATED.equals(response.getStatusCode())) {
             throw new RuntimeException("Failed to create user in keycloak " + response.getBody());

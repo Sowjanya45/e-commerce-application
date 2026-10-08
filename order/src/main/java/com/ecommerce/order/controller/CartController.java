@@ -21,6 +21,10 @@ public class CartController {
     public ResponseEntity<String> addToCart(
             @RequestHeader("X-User-ID") String userId,
             @RequestBody CartItemRequest request) {
+        if (request.getProductId() == null || request.getProductId().isBlank()
+                || request.getQuantity() == null || request.getQuantity() < 1) {
+            return ResponseEntity.badRequest().body("productId and a quantity of at least 1 are required");
+        }
         if (!cartService.addToCart(userId, request)) {
             return ResponseEntity.badRequest().body("Not able to complete the request");
         }

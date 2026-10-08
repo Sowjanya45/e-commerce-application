@@ -3,6 +3,7 @@ package com.ecommerce.product.controllers;
 import com.ecommerce.product.dtos.ProductRequest;
 import com.ecommerce.product.dtos.ProductResponse;
 import com.ecommerce.product.services.ProductService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,7 +28,7 @@ public class ProductController {
     }
 
     @PostMapping
-    public ResponseEntity<ProductResponse> createProduct(@RequestBody ProductRequest productRequest) {
+    public ResponseEntity<ProductResponse> createProduct(@Valid @RequestBody ProductRequest productRequest) {
         return new ResponseEntity<ProductResponse>(productService.createProduct(productRequest),
                 HttpStatus.CREATED);
     }
@@ -39,7 +40,7 @@ public class ProductController {
 
     @GetMapping("/{id}")
     public ResponseEntity<ProductResponse> getProductById(
-                                    @PathVariable String id) {
+                                    @PathVariable Long id) {
         return productService.getProductById(id)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
@@ -48,7 +49,7 @@ public class ProductController {
     @PutMapping("/{id}")
     public ResponseEntity<ProductResponse> updateProduct(
             @PathVariable Long id,
-            @RequestBody ProductRequest productRequest) {
+            @Valid @RequestBody ProductRequest productRequest) {
         return productService.updateProduct(id, productRequest)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
@@ -69,6 +70,9 @@ public class ProductController {
     @PatchMapping("/{id}/decrement-stock")
     public ResponseEntity<String> decrementStock(@PathVariable Long id,
                                                   @RequestParam Integer quantity) {
+        if (quantity == null || quantity <= 0) {
+            return ResponseEntity.badRequest().body("quantity must be greater than 0");
+        }
         if (!productService.decrementStock(id, quantity)) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body("Insufficient stock or product not found");
@@ -79,6 +83,9 @@ public class ProductController {
     @PatchMapping("/{id}/restore-stock")
     public ResponseEntity<String> restoreStock(@PathVariable Long id,
                                                 @RequestParam Integer quantity) {
+        if (quantity == null || quantity <= 0) {
+            return ResponseEntity.badRequest().body("quantity must be greater than 0");
+        }
         productService.restoreStock(id, quantity);
         return ResponseEntity.ok("Stock restored");
     }

@@ -77,8 +77,8 @@ public class ProductService {
                 .collect(Collectors.toList());
     }
 
-    public Optional<ProductResponse> getProductById(String id) {
-        return productRepository.findByIdAndActiveTrue(Long.valueOf(id))
+    public Optional<ProductResponse> getProductById(Long id) {
+        return productRepository.findByIdAndActiveTrue(id)
                 .map(this::mapToProductResponse);
     }
 
