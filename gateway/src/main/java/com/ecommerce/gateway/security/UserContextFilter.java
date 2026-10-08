@@ -12,14 +12,16 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 /**
- * Overwrites any client-supplied X-User-ID header with the subject of the
- * validated JWT before forwarding downstream, so order/user/product can
- * trust the header instead of relying on whatever the caller sent.
+ * Overwrites any client-supplied X-User-ID / X-User-Roles headers with the
+ * subject and client roles of the validated JWT before forwarding downstream,
+ * so order/user/product can trust them instead of relying on whatever the
+ * caller sent.
  */
 @Component
 public class UserContextFilter implements GlobalFilter, Ordered {
 
     private static final String USER_ID_HEADER = "X-User-ID";
+    private static final String USER_ROLES_HEADER = "X-User-Roles";
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
@@ -27,14 +29,17 @@ public class UserContextFilter implements GlobalFilter, Ordered {
                 .map(SecurityContext::getAuthentication)
                 .filter(JwtAuthenticationToken.class::isInstance)
                 .cast(JwtAuthenticationToken.class)
-                .map(token -> token.getToken().getSubject())
-                .defaultIfEmpty("")
-                .flatMap(subject -> {
+                .map(token -> token.getToken())
+                .map(jwt -> new String[]{jwt.getSubject(), String.join(",", JwtRoles.of(jwt))})
+                .defaultIfEmpty(new String[]{"", ""})
+                .flatMap(caller -> {
                     ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
                             .headers(headers -> {
                                 headers.remove(USER_ID_HEADER);
-                                if (!subject.isBlank()) {
-                                    headers.set(USER_ID_HEADER, subject);
+                                headers.remove(USER_ROLES_HEADER);
+                                if (!caller[0].isBlank()) {
+                                    headers.set(USER_ID_HEADER, caller[0]);
+                                    headers.set(USER_ROLES_HEADER, caller[1]);
                                 }
                             })
                             .build();

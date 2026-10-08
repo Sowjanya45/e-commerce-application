@@ -329,6 +329,15 @@
           "clientRole": true,
           "containerId": "74d31cf4-5808-43de-93e0-01a079063245",
           "attributes": {}
+        },
+        {
+          "id": "5ac46600-bd85-4107-a4fd-0398c520e27c",
+          "name": "ADMIN",
+          "description": "Can list all users and read or edit any profile",
+          "composite": false,
+          "clientRole": true,
+          "containerId": "74d31cf4-5808-43de-93e0-01a079063245",
+          "attributes": {}
         }
       ],
       "account-console": [],

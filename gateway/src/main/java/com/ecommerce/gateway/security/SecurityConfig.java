@@ -1,7 +1,10 @@
 package com.ecommerce.gateway.security;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
@@ -11,15 +14,41 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverter;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.net.InetSocketAddress;
 import java.util.List;
-import java.util.Map;
 
 @Configuration
 @EnableWebFluxSecurity
 public class SecurityConfig {
+
+    /**
+     * Actuator runs on its own management port (see gateway-service-docker.yml),
+     * which docker-compose publishes on 127.0.0.1 only. Requests arriving on that
+     * port need no JWT so Prometheus can scrape; everything on the public port
+     * still goes through the chain below.
+     */
+    @Bean
+    @Order(Ordered.HIGHEST_PRECEDENCE)
+    public SecurityWebFilterChain managementSecurityChain(
+            ServerHttpSecurity http,
+            @Value("${management.server.port:-1}") int managementPort) {
+        return http
+                .securityMatcher(exchange -> {
+                    InetSocketAddress local = exchange.getRequest().getLocalAddress();
+                    boolean onManagementPort = managementPort > 0
+                            && local != null && local.getPort() == managementPort;
+                    return onManagementPort
+                            ? ServerWebExchangeMatcher.MatchResult.match()
+                            : ServerWebExchangeMatcher.MatchResult.notMatch();
+                })
+                .csrf(ServerHttpSecurity.CsrfSpec::disable)
+                .authorizeExchange(exchange -> exchange.anyExchange().permitAll())
+                .build();
+    }
 
     @Bean
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
@@ -34,6 +63,11 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.POST, "/api/products/**").hasRole("PRODUCT")
                         .pathMatchers(HttpMethod.PUT, "/api/products/**").hasRole("PRODUCT")
                         .pathMatchers(HttpMethod.DELETE, "/api/products/**").hasRole("PRODUCT")
+                        // Stock PATCH endpoints exist only for order-service, which
+                        // calls product-service directly (not through the gateway).
+                        .pathMatchers(HttpMethod.PATCH, "/api/products/**").denyAll()
+                        // Listing every user exposes everyone's personal data.
+                        .pathMatchers(HttpMethod.GET, "/api/users").hasRole("ADMIN")
                         .anyExchange().authenticated())
                 .oauth2ResourceServer(oauth2 ->
                         oauth2.jwt(jwt ->
@@ -45,14 +79,7 @@ public class SecurityConfig {
         ReactiveJwtAuthenticationConverter jwtAuthenticationConverter =
                 new ReactiveJwtAuthenticationConverter();
         jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(jwt -> {
-            List<String> roles = jwt.getClaimAsMap("resource_access")
-                    .entrySet().stream()
-                    .filter(entry -> entry.getKey().equals("oauth2-pkce"))
-                    .flatMap(entry -> ((Map<String, List<String>>) entry.getValue())
-                            .get("roles").stream())
-                    .toList();
-
-            System.out.println("Extracted Roles: " + roles);
+            List<String> roles = JwtRoles.of(jwt);
 
             return Flux.fromIterable(roles)
                     .map(role -> new SimpleGrantedAuthority("ROLE_" + role));
