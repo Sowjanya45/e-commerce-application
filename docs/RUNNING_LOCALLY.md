@@ -77,6 +77,7 @@ names on the Docker network, which is how containers reach each other (inside a 
 | `MONGO_URI` | user-service | `mongodb://mongo:27017/ecom_user` |
 | `RABBITMQ_*` | config server, user, product | `rabbitmq`, `5672`, `guest`/`guest`, vhost `/` |
 | `ZIPKIN_URL` | gateway, user, product, order | `http://zipkin:9411/api/v2/spans` |
+| `ENCRYPT_KEY` | config server (`/encrypt`, `/decrypt`) | any long random string |
 
 `.env` is gitignored on purpose — never commit it.
 
@@ -173,7 +174,9 @@ These must match `keycloak.admin.username/password` in
 Same as 4b, with username `testuser` and a password of your choice (Temporary OFF, and fill in
 Email / First / Last name). Under **Role mapping → Assign role → Filter by clients**, assign the
 client roles of **`oauth2-pkce`**: `USER` and `ORDER`, plus `PRODUCT` if this account should be
-able to create/update/delete products.
+able to create/update/delete products, and `ADMIN` if it should be able to list all users and
+read/edit any profile. (Ordinary customers get only `USER`; they can read and edit **only their
+own** profile.)
 
 > Every account must have **at least one** `oauth2-pkce` client role. The gateway reads roles
 > from the token's `resource_access.oauth2-pkce` claim; a token without it is rejected.
@@ -246,8 +249,9 @@ PostgreSQL). Routes exposed by the gateway:
 
 | Path | Service | Notes |
 |---|---|---|
-| `/api/products/**` | product | `POST/PUT/DELETE` require the `PRODUCT` role; `GET` needs any valid token |
-| `/api/users/**` | user | |
+| `/api/products/**` | product | `POST/PUT/DELETE` require the `PRODUCT` role; `GET` needs any valid token; `PATCH` (internal stock endpoints) is blocked |
+| `/api/users` (list all) | user | needs the `ADMIN` role |
+| `/api/users/{id}`, `/api/users/by-keycloak-id/{id}` | user | your own profile, or any profile with `ADMIN` |
 | `/api/orders/**`, `/api/cart/**` | order | |
 
 ### Postman
@@ -257,6 +261,14 @@ flow from Postman you must first add Postman's callback
 `https://oauth.pstmn.io/v1/callback` to **Clients → oauth2-pkce → Valid redirect URIs** in
 Keycloak (the realm export only allows `http://localhost:5173/*`). Using the password grant
 above avoids this.
+
+### Automated check
+
+With the stack running, `bash scripts/e2e-check.sh` runs ~100 checks through the gateway (auth,
+roles and ownership, users, products, cart, orders, validation, actuator, infrastructure,
+Kafka/notification, rate limiting) and prints `PASS`/`FAIL` per check. It creates temporary
+Keycloak users and **empties the product, order and user data** afterwards, so use it on a dev
+stack only.
 
 ## 6. Day-to-day usage
 
@@ -286,6 +298,7 @@ above avoids this.
 | Grafana | <http://localhost:3000> | anonymous admin |
 | Prometheus | <http://localhost:9090> | — |
 | Zipkin | <http://localhost:9411> | — |
+| Gateway actuator / metrics | <http://localhost:9081/actuator> | none — bound to `127.0.0.1` only |
 | PostgreSQL | `localhost:5432` | `DB_USER` / `DB_PASSWORD` |
 | MongoDB | `localhost:27017` | none |
 
@@ -319,7 +332,7 @@ To inspect data:
 - Compose mounts that folder into the config-server container, so **edits take effect after a
   restart** of the affected service (`docker compose restart <service>`), with no image rebuild.
 - Live refresh without restarting is available through Spring Cloud Bus (RabbitMQ): call
-  `POST http://localhost:8080/actuator/busrefresh` (see the Postman collection). Services have
+  `POST http://localhost:9081/actuator/refresh` for the gateway (see the Postman collection). Services have
   to be reachable for the actuator call; restarting is the simpler option locally.
 - Secrets are injected from `.env` through compose `environment:` entries
   (`${DB_USER}` → container env → `${DB_USER}` in the YAML).
@@ -337,6 +350,7 @@ To inspect data:
 | Services stuck restarting | Usually waiting for the config server or Eureka. Give it a few minutes; then `docker compose logs <service>`. |
 | Config-related startup failure (`Could not locate PropertySource`, or defaults used) | Config server not healthy: `docker compose logs config-server`, and check <http://localhost:8888/actuator/health>. |
 | `401 Unauthorized` through the gateway | No/expired token, or token fetched from the wrong host. Fetch from `localhost:8443` (section 5); tokens expire after a few minutes. |
+| `403 Forbidden` on `GET /api/users` or on someone else's profile | Listing users and reading/editing other people's profiles needs the `ADMIN` client role; customers can only access their own profile. Assign `ADMIN` in Keycloak and fetch a **new** token. |
 | `403 Forbidden` on product `POST/PUT/DELETE` | Your user lacks the `PRODUCT` client role. Assign it in Keycloak and fetch a **new** token. |
 | Token request: *"Account is not fully set up"* | The Keycloak user is missing Email / First name / Last name. Fill them in. |
 | Token request: *invalid_grant / Invalid user credentials* | Wrong password, or the password was saved as Temporary. |

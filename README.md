@@ -106,6 +106,6 @@ A ready-to-import Postman collection covering the main API flows is at
   saga/orchestrated transaction — see `OrderService.createOrder()`.
 - `notification-service` currently only logs consumed events; it doesn't yet send real emails or
   write to a database.
-- The Gateway's `PRODUCT` role restriction on product-management endpoints has no account holding
-  that role by default — grant it manually in Keycloak to whichever account should manage the
-  catalog.
+- The Gateway's `PRODUCT` and `ADMIN` role restrictions (product management; listing all users and
+  reading/editing other people's profiles) have no account holding those roles by default — grant
+  them manually in Keycloak to the accounts that need them.
