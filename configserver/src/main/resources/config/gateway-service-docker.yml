@@ -4,6 +4,10 @@ server:
   port: 8080
 
 management:
+  server:
+    # Actuator on its own port: it is not behind the gateway login, so it must
+    # never be published to the network (compose binds it to 127.0.0.1 only).
+    port: 9081
   endpoints:
     web:
       exposure:
@@ -60,6 +64,8 @@ spring:
           jwk-set-uri: http://keycloak:8080/realms/ecom-app/protocol/openid-connect/certs
 
 eureka:
+  dashboard:
+    url: http://eureka:8761   # target of the gateway's /eureka/** routes
   client:
     serviceUrl:
       defaultZone: http://eureka:8761/eureka/

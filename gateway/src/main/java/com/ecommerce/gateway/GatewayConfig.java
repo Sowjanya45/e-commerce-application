@@ -4,6 +4,7 @@ import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
 import org.springframework.cloud.gateway.filter.ratelimit.RedisRateLimiter;
 import org.springframework.cloud.gateway.route.RouteLocator;
 import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -11,6 +12,10 @@ import reactor.core.publisher.Mono;
 
 @Configuration
 public class GatewayConfig {
+
+    // localhost works when the gateway runs on the host; docker config overrides it
+    @Value("${eureka.dashboard.url:http://localhost:8761}")
+    private String eurekaDashboardUrl;
 
     @Bean
     public RedisRateLimiter redisRateLimiter() {
@@ -54,10 +59,10 @@ public class GatewayConfig {
                 .route("eureka-server", r -> r
                         .path("/eureka/main")
                         .filters(f -> f.rewritePath("/eureka/main", "/"))
-                        .uri("http://localhost:8761"))
+                        .uri(eurekaDashboardUrl))
                 .route("eureka-server-static", r -> r
                         .path("/eureka/**")
-                        .uri("http://localhost:8761"))
+                        .uri(eurekaDashboardUrl))
                 .build();
     }
 }

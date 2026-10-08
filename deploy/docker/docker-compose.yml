@@ -133,6 +133,7 @@ services:
       - RABBITMQ_USERNAME=${RABBITMQ_USERNAME}
       - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
       - RABBITMQ_VHOST=${RABBITMQ_VHOST}
+      - ENCRYPT_KEY=${ENCRYPT_KEY:-dev-only-change-me}
     volumes:
       - ./../../configserver/src/main/resources/config:/config
 
@@ -152,6 +153,7 @@ services:
 #    mem_limit: 700m
     ports:
       - 8080:8080
+      - "127.0.0.1:9081:9081"   # actuator, host-only (no login on this port)
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - ZIPKIN_URL=${ZIPKIN_URL}

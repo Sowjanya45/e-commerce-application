@@ -24,6 +24,6 @@ scrape_configs:
     metrics_path: '/actuator/prometheus'
     scrape_interval: 3s
     static_configs:
-      - targets: ['gateway-service:8080']
+      - targets: ['gateway-service:9081']
         labels:
           application: 'gateway-service'

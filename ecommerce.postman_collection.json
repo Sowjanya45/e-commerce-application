@@ -444,12 +444,12 @@
 								"method": "POST",
 								"header": [],
 								"url": {
-									"raw": "http://localhost:8080/actuator/refresh",
+									"raw": "http://localhost:9081/actuator/refresh",
 									"protocol": "http",
 									"host": [
 										"localhost"
 									],
-									"port": "8080",
+									"port": "9081",
 									"path": [
 										"actuator",
 										"refresh"
